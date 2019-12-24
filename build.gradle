@@ -1,0 +1,37 @@
+
+
+repositories {
+    mavenCentral()
+    maven {
+        url "https://plugins.gradle.org/m2/"
+    }
+}
+
+subprojects {
+
+    version = "1.0"
+    group = "jvc.prototype"
+
+    apply plugin: 'scala'
+
+
+    repositories {
+        mavenCentral()
+    }
+
+    task fatJar(type: Jar) {
+        manifest {
+            attributes 'Implementation-Title': project.name
+            attributes 'Implementation-Version': project.version
+        }
+
+        from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
+        with jar
+    }
+
+    dependencies {
+        compile "org.scala-lang:scala-compiler:2.12.10"
+        compile "ch.qos.logback:logback-classic:1.2.3"
+        compile "com.typesafe.scala-logging:scala-logging_2.12:3.9.2"
+    }
+}

@@ -1,0 +1,3 @@
+include ":modules:sub_module"
+include ":modules:master_module"
+include ":modules:common"
