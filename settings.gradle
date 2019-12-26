@@ -1,3 +1,4 @@
+rootProject.name = "scala-pluggable-server"
 include ":modules:sub_module"
 include ":modules:pluggable_server"
 include ":modules:pluggable_sdk"

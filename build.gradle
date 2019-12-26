@@ -7,6 +7,7 @@ repositories {
 
 
 
+
 subprojects {
 
     version = "1.0"
@@ -19,7 +20,7 @@ subprojects {
         mavenCentral()
     }
 
-    task fatJar(type: Jar) {
+    /*task fatJar(type: Jar) {
         manifest {
             attributes 'Implementation-Title': project.name
             attributes 'Implementation-Version': project.version
@@ -27,7 +28,7 @@ subprojects {
 
         from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
         with jar
-    }
+    }*/
 
     dependencies {
         compile "org.scala-lang:scala-compiler:2.12.10"
@@ -36,3 +37,12 @@ subprojects {
     }
 }
 
+task copyToLib(type: Copy, dependsOn: subprojects.build) {
+    into "$buildDir/out/lib"
+    from  project(":modules:pluggable_server").configurations.runtime
+}
+
+task copyMain(type: Copy, dependsOn: copyToLib){
+    into "$buildDir/out"
+    from  project(":modules:pluggable_server").jar
+}

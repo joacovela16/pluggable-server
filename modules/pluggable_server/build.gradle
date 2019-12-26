@@ -2,21 +2,18 @@ dependencies {
     compile project(":modules:pluggable_sdk")
 }
 
-configurations {
-    pluggable
-}
-
-
+/*
 task copyToLib(type: Copy) {
     into "$buildDir/libs/lib"
-    from configurations.compile
+    from  configurations.runtime
 }
+*/
 
 jar {
-    dependsOn copyToLib
+    //dependsOn copyToLib
     manifest {
         attributes(
-                'Class-Path': configurations.compile.collect { "lib/$it.name" }.join(' '),
+                'Class-Path': configurations.runtime.collect { "lib/$it.name" }.join(' '),
                 'Main-Class': 'jvc.serverplug.engine.Main'
         )
     }
