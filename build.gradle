@@ -1,11 +1,11 @@
-
-
 repositories {
     mavenCentral()
     maven {
         url "https://plugins.gradle.org/m2/"
     }
 }
+
+
 
 subprojects {
 
@@ -35,3 +35,4 @@ subprojects {
         compile "com.typesafe.scala-logging:scala-logging_2.12:3.9.2"
     }
 }
+

@@ -2,9 +2,9 @@ package jvc.prototype.sub
 
 import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.{Directives, Route}
-import jvc.prototype.common.Registry
+import jvc.prototype.pluggable.sdk.RestRegistry
 
-class JoaquinRecord2 extends Registry with Directives {
+class JoaquinRecord2 extends RestRegistry with Directives {
 
   override def identifier: String = "core"
 
