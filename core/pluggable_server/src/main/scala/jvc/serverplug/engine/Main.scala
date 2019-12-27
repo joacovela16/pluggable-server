@@ -18,6 +18,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 object Main extends HttpApp with LazyLogging {
 
+  private lazy val watchService: WatchService = FileSystems.getDefault.newWatchService()
   private val pluginStore: mutable.Map[PluginID, Plugin] = mutable.Map.empty
 
   def taskSendReport: StandardRoute = {
@@ -128,20 +129,21 @@ object Main extends HttpApp with LazyLogging {
     new Thread {
       override def run() {
 
-        val watchService: WatchService = FileSystems.getDefault.newWatchService()
-
         Paths.get("plugins").register(watchService,
           StandardWatchEventKinds.ENTRY_MODIFY
         )
 
-        while (true) {
-          val key: WatchKey = watchService.take()
-          key.pollEvents().forEach { x =>
+        Try {
+          while (true) {
 
-            val context: String = x.context().toString
+            val key: WatchKey = watchService.take()
+            key.pollEvents().forEach { x =>
 
-            x.kind().toString match {
-              case "ENTRY_MODIFY" => taskAddEntry(context)
+              val context: String = x.context().toString
+
+              x.kind().toString match {
+                case "ENTRY_MODIFY" => taskAddEntry(context)
+              }
             }
           }
         }
@@ -151,10 +153,12 @@ object Main extends HttpApp with LazyLogging {
 
   def taskRunServer(): Unit = startServer("localhost", 8080)
 
-  def main(args: Array[String]): Unit = {
+  def taskStopWatch(): Unit = watchService.close()
 
+  def main(args: Array[String]): Unit = {
     taskLoadCreated()
     taskWatchJars()
     taskRunServer()
+    taskStopWatch()
   }
 }

@@ -5,8 +5,13 @@ repositories {
     }
 }
 
+configurations {
+    libs
+}
 
-
+dependencies {
+    libs fileTree(dir: "$buildDir/out/lib", includes: ["*.jar"])
+}
 
 subprojects {
 
@@ -20,16 +25,6 @@ subprojects {
         mavenCentral()
     }
 
-    /*task fatJar(type: Jar) {
-        manifest {
-            attributes 'Implementation-Title': project.name
-            attributes 'Implementation-Version': project.version
-        }
-
-        from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
-        with jar
-    }*/
-
     dependencies {
         compile "org.scala-lang:scala-compiler:2.12.10"
         compile "ch.qos.logback:logback-classic:1.2.3"
@@ -37,12 +32,32 @@ subprojects {
     }
 }
 
-task copyToLib(type: Copy, dependsOn: subprojects.build) {
-    into "$buildDir/out/lib"
-    from  project(":modules:pluggable_server").configurations.runtime
+
+project(":core:pluggable_server") {
+    jar {
+        manifest {
+            attributes(
+                    'Class-Path': rootProject.configurations.libs.collect { it.name }.join(" "),
+                    'Main-Class': 'jvc.serverplug.engine.Main'
+            )
+        }
+    }
 }
 
-task copyMain(type: Copy, dependsOn: copyToLib){
-    into "$buildDir/out"
-    from  project(":modules:pluggable_server").jar
+
+task copyToLib(type: Copy, dependsOn: subprojects.build) {
+    into "$buildDir/out/lib"
+    from subprojects.collect { it.configurations.runtime }
 }
+
+task prepareModules(type: Copy, dependsOn: copyToLib) {
+    into "$buildDir/out/plugins"
+    from subprojects.findAll { it.path.contains(":module:") }.collect { it.jar }
+}
+
+
+task prepareJar(type: Copy) {
+    into "$buildDir/out"
+    from project(":core:pluggable_server").jar
+}
+
