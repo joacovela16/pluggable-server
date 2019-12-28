@@ -1,3 +1,25 @@
 dependencies {
     compile project(":core:pluggable_sdk")
 }
+
+task prepareJar(type: Jar, dependsOn: build) {
+    doFirst {
+
+        String a = rootProject
+                .subprojects
+                .configurations
+                .runtime.collect { run -> run.resolve().collect { x -> "lib/$x.name" }.join(' ') }.join(' ')
+
+        from sourceSets.main.output
+
+        manifest {
+            attributes(
+                    'Class-Path': a,
+                    'Main-Class': 'jvc.serverplug.engine.Main'
+            )
+        }
+    }
+
+}
+
+build.finalizedBy(prepareJar)

@@ -5,21 +5,11 @@ repositories {
     }
 }
 
-configurations {
-    libs
-}
-
-dependencies {
-    libs fileTree(dir: "$buildDir/out/lib", includes: ["*.jar"])
-}
-
 subprojects {
-
     version = "1.0"
     group = "jvc.prototype"
 
     apply plugin: 'scala'
-
 
     repositories {
         mavenCentral()
@@ -32,32 +22,20 @@ subprojects {
     }
 }
 
-
-project(":core:pluggable_server") {
-    jar {
-        manifest {
-            attributes(
-                    'Class-Path': rootProject.configurations.libs.collect { it.name }.join(" "),
-                    'Main-Class': 'jvc.serverplug.engine.Main'
-            )
-        }
-    }
-}
-
-
 task copyToLib(type: Copy, dependsOn: subprojects.build) {
-    into "$buildDir/out/lib"
+    into "$buildDir/lib"
     from subprojects.collect { it.configurations.runtime }
 }
 
 task prepareModules(type: Copy, dependsOn: copyToLib) {
-    into "$buildDir/out/plugins"
+    into "$buildDir/plugins"
     from subprojects.findAll { it.path.contains(":module:") }.collect { it.jar }
 }
 
 
-task prepareJar(type: Copy) {
-    into "$buildDir/out"
+task release(type: Copy, dependsOn: [prepareModules, project(":core:pluggable_server").tasks.build]) {
+    into "$buildDir"
     from project(":core:pluggable_server").jar
 }
 
+defaultTasks( "build","release")
