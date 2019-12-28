@@ -1,0 +1,11 @@
+configurations {
+    asPlugin
+}
+dependencies {
+    compile project(":core:pluggable_sdk")
+    // https://mvnrepository.com/artifact/org.apache.commons/commons-lang3
+    compile group: 'org.apache.commons', name: 'commons-lang3', version: '3.9'
+// https://mvnrepository.com/artifact/com.typesafe.akka/akka-cluster
+    compile group: 'com.typesafe.akka', name: 'akka-cluster_2.12', version: '2.6.1'
+
+}

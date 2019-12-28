@@ -1,0 +1,63 @@
+repositories {
+    mavenCentral()
+    maven {
+        url "https://plugins.gradle.org/m2/"
+    }
+}
+
+configurations {
+    libs
+}
+
+dependencies {
+    libs fileTree(dir: "$buildDir/out/lib", includes: ["*.jar"])
+}
+
+subprojects {
+
+    version = "1.0"
+    group = "jvc.prototype"
+
+    apply plugin: 'scala'
+
+
+    repositories {
+        mavenCentral()
+    }
+
+    dependencies {
+        compile "org.scala-lang:scala-compiler:2.12.10"
+        compile "ch.qos.logback:logback-classic:1.2.3"
+        compile "com.typesafe.scala-logging:scala-logging_2.12:3.9.2"
+    }
+}
+
+
+project(":core:pluggable_server") {
+    jar {
+        manifest {
+            attributes(
+                    'Class-Path': rootProject.configurations.libs.collect { it.name }.join(" "),
+                    'Main-Class': 'jvc.serverplug.engine.Main'
+            )
+        }
+    }
+}
+
+
+task copyToLib(type: Copy, dependsOn: subprojects.build) {
+    into "$buildDir/out/lib"
+    from subprojects.collect { it.configurations.runtime }
+}
+
+task prepareModules(type: Copy, dependsOn: copyToLib) {
+    into "$buildDir/out/plugins"
+    from subprojects.findAll { it.path.contains(":module:") }.collect { it.jar }
+}
+
+
+task prepareJar(type: Copy) {
+    into "$buildDir/out"
+    from project(":core:pluggable_server").jar
+}
+
