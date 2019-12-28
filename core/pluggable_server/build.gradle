@@ -1,5 +1,9 @@
 dependencies {
     compile project(":core:pluggable_sdk")
+    compile "de.heikoseeberger:akka-http-circe_2.12:1.30.0"
+    compile "io.circe:circe-core_2.12:0.12.3"
+    compile "io.circe:circe-generic_2.12:0.12.3"
+    compile "io.circe:circe-parser_2.12:0.12.3"
 }
 
 task prepareJar(type: Jar, dependsOn: build) {
