@@ -1,9 +1,8 @@
 package jvc.serverplug
 
-import java.io.{File, FilenameFilter}
-import java.net.{JarURLConnection, URL}
-import java.nio.file._
-import java.util.jar.JarFile
+import java.io.{File, FileFilter, FilenameFilter}
+import java.net.URL
+import java.util.{Timer, TimerTask}
 
 import akka.http.scaladsl.model.DateTime
 import com.typesafe.scalalogging.LazyLogging
@@ -11,7 +10,8 @@ import jvc.prototype.pluggable.sdk.{Registry, RestRegistry}
 import jvc.serverplug.engine.plugin.{Plugin, PluginInstalled, PluginUninstalled}
 import jvc.serverplug.engine.rest.{PluginProxy, PluginState}
 
-import scala.collection.mutable
+import scala.collection.parallel.ParSet
+import scala.collection.parallel.mutable.ParMap
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.util.{Failure, Try}
@@ -21,9 +21,9 @@ package object engine extends LazyLogging {
   type PluginID = String
   type RegistryID = String
 
-  val WATCH_SERVICES: WatchService = FileSystems.getDefault.newWatchService()
+  val TIMER: Timer = new Timer()
   val PLUGIN_PATH: String = sys.props.getOrElse("pluginPath", "plugins")
-  val PLUGIN_STORE: mutable.Map[PluginID, Plugin] = mutable.Map.empty
+  val PLUGIN_STORE: ParMap[PluginID, Plugin] = ParMap.empty
 
   def getActiveService(pluginID: PluginID, registryID: RegistryID): Option[Registry] = {
     PLUGIN_STORE.get(pluginID).collect { case x: PluginInstalled => x }.filter(_.active).flatMap(_.registry.get(registryID))
@@ -45,12 +45,9 @@ package object engine extends LazyLogging {
 
             if (maybeJar.getName.endsWith(".jar") && libs.isDirectory) {
 
-              val url: URL = new URL(s"jar:file:${maybeJar.getParent}/${maybeJar.getName}!/")
-
-              val libsAbsPath: PluginID = libs.getAbsolutePath
               val libsUrl: Array[URL] = libs.listFiles(new FilenameFilter {
                 override def accept(dir: File, name: PluginID): Boolean = name.endsWith(".jar")
-              }).map(x => x.toURI.toURL/*new URL(s"jar:file:$libsAbsPath/${x.getName}!/")*/)
+              }).map(x => x.toURI.toURL)
 
               Some(libsUrl :+ maybeJar.toURI.toURL)
             } else {
@@ -64,7 +61,7 @@ package object engine extends LazyLogging {
   }
 
   def taskRemoveEntry(pluginId: PluginID, delete: Boolean = false): Unit = {
-    PLUGIN_STORE.get(pluginId).collect { case x: PluginInstalled => x }.foreach { plugin =>
+    PLUGIN_STORE.get(pluginId).foreach { x =>
 
       if (delete) {
         PLUGIN_STORE -= pluginId
@@ -72,19 +69,25 @@ package object engine extends LazyLogging {
         PLUGIN_STORE.put(pluginId, PluginUninstalled(pluginId))
       }
 
-      plugin.registry.values.foreach { x =>
-        Future(x.onDestroy()).onComplete {
-          case Failure(exception) => logger.error(exception.getLocalizedMessage, exception)
-          case _ =>
-        }
-      }
+      x match {
+        case plugin: PluginInstalled =>
 
-      Try {
-        plugin.classLoader.close()
-        plugin.classLoader.destroy()
-      } match {
-        case Failure(exception) => logger.error(exception.getLocalizedMessage, exception)
-        case _ => System.gc()
+          plugin.registry.values.foreach { x =>
+            Future(x.onDestroy()).onComplete {
+              case Failure(exception) => logger.error(exception.getLocalizedMessage, exception)
+              case _ =>
+            }
+          }
+
+          Try {
+            plugin.classLoader.close()
+            plugin.classLoader.destroy()
+          } match {
+            case Failure(exception) => logger.error(exception.getLocalizedMessage, exception)
+            case _ => System.gc()
+          }
+
+        case _ =>
       }
     }
   }
@@ -98,31 +101,30 @@ package object engine extends LazyLogging {
   }
 
   def taskWatchJars(): Unit = {
-    new Thread {
-      override def run() {
 
-        Paths.get(PLUGIN_PATH).register(WATCH_SERVICES, StandardWatchEventKinds.ENTRY_CREATE, StandardWatchEventKinds.ENTRY_DELETE)
+    TIMER.scheduleAtFixedRate(
+      new TimerTask {
+        override def run(): Unit = {
 
-        Try {
-          while (true) {
+          val file: File = new File(PLUGIN_PATH)
+          val modules: Set[PluginID] = file
+            .listFiles(new FileFilter {
+              override def accept(pathname: File): Boolean = pathname.isDirectory
+            })
+            .map(_.getName).toSet
 
-            val key: WatchKey = WATCH_SERVICES.take()
-            key.pollEvents().forEach { x =>
-
-              val context: String = x.context().toString
-
-              x.kind().toString match {
-                case "ENTRY_CREATE" =>
-                  taskAddEntry(context)
-                case "ENTRY_DELETE" =>
-                  taskRemoveEntry(context, true)
-                case _ =>
-              }
-            }
-          }
+          val stored: ParSet[PluginID] = PLUGIN_STORE.keySet
+          val toRemove: ParSet[PluginID] = if (stored.nonEmpty && modules.isEmpty) stored else stored.diff(modules)
+          val toAdd: Set[PluginID] = modules.diff(stored)
+          toRemove.foreach(x => taskRemoveEntry(x, true))
+          toAdd.foreach(x => taskAddEntry(x, true))
+          logger.info(s"Added: ${toAdd.mkString(",")} ")
+          logger.info(s"Removed: ${toRemove.mkString(",")} ")
         }
-      }
-    }.start()
+      },
+      20000,
+      60000
+    )
   }
 
   def buildState(xs: Iterable[Plugin]): PluginState = PluginState(
@@ -134,5 +136,8 @@ package object engine extends LazyLogging {
     }.toSeq
   )
 
-  def taskStopWatch(): Unit = WATCH_SERVICES.close()
+  def taskStopWatch(): Unit = {
+    TIMER.purge()
+    TIMER.cancel()
+  }
 }
