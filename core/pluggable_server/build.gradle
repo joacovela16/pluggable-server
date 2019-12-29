@@ -4,26 +4,18 @@ dependencies {
     compile "io.circe:circe-core_2.12:0.12.3"
     compile "io.circe:circe-generic_2.12:0.12.3"
     compile "io.circe:circe-parser_2.12:0.12.3"
+    // https://mvnrepository.com/artifact/org.apache.xbean/xbean-classloader
+    compile group: 'org.apache.xbean', name: 'xbean-classloader', version: '4.15'
+
+
 }
 
-task prepareJar(type: Jar, dependsOn: build) {
-    doFirst {
-
-        String a = rootProject
-                .subprojects
-                .configurations
-                .runtime.collect { run -> run.resolve().collect { x -> "lib/$x.name" }.join(' ') }.join(' ')
-
-        from sourceSets.main.output
-
-        manifest {
-            attributes(
-                    'Class-Path': a,
-                    'Main-Class': 'jvc.serverplug.engine.Main'
-            )
-        }
+jar {
+    manifest {
+        attributes(
+                'Class-Path': configurations.runtime.collect { x -> "libs/$x.name" }.join(' '),
+                'Main-Class': 'jvc.serverplug.engine.Main'
+        )
     }
 
 }
-
-build.finalizedBy(prepareJar)

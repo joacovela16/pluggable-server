@@ -13,8 +13,8 @@ subprojects {
 
     repositories {
         mavenCentral()
-        maven{
-           url "https://mvnrepository.com/artifact"
+        maven {
+            url "https://mvnrepository.com/artifact"
         }
     }
 
@@ -23,22 +23,43 @@ subprojects {
         compile "ch.qos.logback:logback-classic:1.2.3"
         compile "com.typesafe.scala-logging:scala-logging_2.12:3.9.2"
     }
+
+    def displayName = project.displayName
+
+    if (displayName.contains(":module:")) {
+
+
+        task copyJar(type: Copy, dependsOn: build) {
+            into "$rootProject.buildDir/plugins/$project.name"
+            from project.jar
+        }
+
+        task prepare(type: Copy, dependsOn: copyJar) {
+            into "$rootProject.buildDir/plugins/$project.name/libs"
+            from configurations.runtime {
+                transitive false
+                include "*.jar"
+            }
+        }
+    }
 }
 
-task copyToLib(type: Copy, dependsOn: subprojects.build) {
-    into "$buildDir/lib"
-    from subprojects.collect { it.configurations.runtime }
+project(":core:pluggable_server") {
+
+    task copyJar(type: Copy, dependsOn: build) {
+        into "$rootProject.buildDir"
+        from project.jar
+    }
+
+    task prepare(type: Copy, dependsOn: copyJar) {
+        into "$rootProject.buildDir/libs"
+        from configurations.runtime
+    }
 }
 
-task prepareModules(type: Copy, dependsOn: copyToLib) {
-    into "$buildDir/plugins"
-    from subprojects.findAll { it.path.contains(":module:") }.collect { it.jar }
+task prepare(dependsOn: subprojects.findAll { it.tasks.hasProperty("prepare") }.collect { it.tasks.prepare }) {
+
 }
 
 
-task release(type: Copy, dependsOn: [prepareModules, project(":core:pluggable_server").tasks.build]) {
-    into "$buildDir"
-    from project(":core:pluggable_server").jar
-}
-
-defaultTasks( "build","release")
+defaultTasks("build", "prepare")
