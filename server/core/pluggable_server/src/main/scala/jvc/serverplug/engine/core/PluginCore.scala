@@ -23,6 +23,7 @@ trait PluginCore extends LazyLogging with PluginImplicitsSupport {
   val TIMER: Timer = new Timer()
   val PLUGIN_PATH: String = sys.props.getOrElse("pluginPath", "plugins")
   val PLUGIN_STORE: mutable.ParMap[PluginID, Plugin] = ParMap.empty
+  logger.info(PLUGIN_PATH)
 
   def getActiveService(pluginID: PluginID, registryID: RegistryID): Option[Registry] = {
     PLUGIN_STORE.get(pluginID).collect { case x: PluginInstalled => x }.filter(_.active).flatMap(_.registry.get(registryID))
