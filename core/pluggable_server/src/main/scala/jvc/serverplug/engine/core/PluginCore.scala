@@ -1,29 +1,28 @@
-package jvc.serverplug
+package jvc.serverplug.engine.core
 
 import java.io.{File, FileFilter, FilenameFilter}
 import java.net.URL
 import java.util.{Timer, TimerTask}
 
 import akka.http.scaladsl.model.DateTime
+import akka.http.scaladsl.server
 import com.typesafe.scalalogging.LazyLogging
 import jvc.prototype.pluggable.sdk.{Registry, RestRegistry}
-import jvc.serverplug.engine.plugin.{Plugin, PluginInstalled, PluginUninstalled}
-import jvc.serverplug.engine.rest.{PluginProxy, PluginState}
+import jvc.serverplug.engine.model.Types.{PluginID, RegistryID}
+import jvc.serverplug.engine.model._
+import jvc.serverplug.engine.util.PluginImplicitsSupport
 
-import scala.collection.parallel.ParSet
+import scala.collection.parallel.{ParSet, mutable}
 import scala.collection.parallel.mutable.ParMap
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.util.{Failure, Try}
 
-package object engine extends LazyLogging {
-
-  type PluginID = String
-  type RegistryID = String
+trait PluginCore extends LazyLogging with PluginImplicitsSupport {
 
   val TIMER: Timer = new Timer()
   val PLUGIN_PATH: String = sys.props.getOrElse("pluginPath", "plugins")
-  val PLUGIN_STORE: ParMap[PluginID, Plugin] = ParMap.empty
+  val PLUGIN_STORE: mutable.ParMap[PluginID, Plugin] = ParMap.empty
 
   def getActiveService(pluginID: PluginID, registryID: RegistryID): Option[Registry] = {
     PLUGIN_STORE.get(pluginID).collect { case x: PluginInstalled => x }.filter(_.active).flatMap(_.registry.get(registryID))
@@ -33,7 +32,11 @@ package object engine extends LazyLogging {
 
   def getPlugin(pluginID: PluginID): Option[PluginInstalled] = PLUGIN_STORE.get(pluginID).collect { case x: PluginInstalled => x }
 
-  def taskAddEntry(pluginID: String, forceActive: Boolean = false): Unit = {
+  def taskAvailablePlugin(pluginID: PluginID): Unit = {
+    PLUGIN_STORE.put(pluginID, PluginUninstalled(pluginID))
+  }
+
+  def taskAddEntry(pluginID: String, installing: Boolean = false): Future[Unit] = Future {
 
     Option(new File(s"$PLUGIN_PATH/$pluginID"))
       .flatMap { x =>
@@ -57,10 +60,17 @@ package object engine extends LazyLogging {
           case _ => None
         }
       }
-      .foreach(urls => PLUGIN_STORE.put(pluginID, PluginInstalled(pluginID, DateTime.now, urls, forceActive)))
+      .foreach { urls =>
+
+        val installed: PluginInstalled = PluginInstalled(pluginID, DateTime.now, urls, installing)
+        PLUGIN_STORE.put(pluginID, installed)
+        if (installing) {
+          installed.registry.map { case (_, v) => v.onStart() }
+        }
+      }
   }
 
-  def taskRemoveEntry(pluginId: PluginID, delete: Boolean = false): Unit = {
+  def taskRemoveEntry(pluginId: PluginID, delete: Boolean = false): Future[Unit] = Future {
     PLUGIN_STORE.get(pluginId).foreach { x =>
 
       if (delete) {
@@ -107,33 +117,59 @@ package object engine extends LazyLogging {
         override def run(): Unit = {
 
           val file: File = new File(PLUGIN_PATH)
-          val modules: Set[PluginID] = file
-            .listFiles(new FileFilter {
-              override def accept(pathname: File): Boolean = pathname.isDirectory
-            })
-            .map(_.getName).toSet
+          if (file.exists() && file.isDirectory) {
 
-          val stored: ParSet[PluginID] = PLUGIN_STORE.keySet
-          val toRemove: ParSet[PluginID] = if (stored.nonEmpty && modules.isEmpty) stored else stored.diff(modules)
-          val toAdd: Set[PluginID] = modules.diff(stored)
-          toRemove.foreach(x => taskRemoveEntry(x, true))
-          toAdd.foreach(x => taskAddEntry(x, true))
-          logger.info(s"Added: ${toAdd.mkString(",")} ")
-          logger.info(s"Removed: ${toRemove.mkString(",")} ")
+            val modules: Set[PluginID] = file
+              .listFiles(new FileFilter {
+                override def accept(pathname: File): Boolean = pathname.isDirectory
+              })
+              .map(_.getName).toSet
+
+            val stored: ParSet[PluginID] = PLUGIN_STORE.keySet
+            val toRemove: ParSet[PluginID] = if (stored.nonEmpty && modules.isEmpty) stored else stored.diff(modules)
+            val toAdd: Set[PluginID] = modules.diff(stored)
+            toRemove.foreach(x => taskRemoveEntry(x, true))
+            toAdd.foreach(x => taskAvailablePlugin(x))
+            logger.info(s"Added: ${toAdd.mkString(",")} ")
+            logger.info(s"Removed: ${toRemove.mkString(",")} ")
+          }
         }
       },
-      20000,
-      60000
+      3000,
+      3000
     )
   }
 
-  def buildState(xs: Iterable[Plugin]): PluginState = PluginState(
-    xs.map {
-      case x: PluginInstalled =>
-        PluginProxy(x.id, Option(x.installedDate), true, x.active, x.registry.keys.toSeq)
-      case PluginUninstalled(id) =>
-        PluginProxy(id, None, false, false, Nil)
-    }.toSeq
+  def pluginAsEnable(pluginID: PluginID): Future[Unit] = Future {
+    getPlugin(pluginID).foreach { x =>
+      PLUGIN_STORE.put(pluginID, x.asEnable)
+      x.registry.foreach { case (_, v) => v.onActive() }
+    }
+  }
+
+  def pluginAsDisable(pluginID: PluginID): Future[Unit] = Future {
+    getPlugin(pluginID).foreach { x =>
+      PLUGIN_STORE.put(pluginID, x.asDisable)
+      x.registry.foreach { case (_, v) => v.onSuspend() }
+    }
+  }
+
+  def reloadService(pluginID: PluginID, registryID: RegistryID): Future[Unit] = Future {
+    getActiveService(pluginID, registryID).foreach { reg =>
+      reg.onDestroy()
+      reg.onStart()
+    }
+  }
+
+  def redirectToService(pluginID: PluginID, registryID: RegistryID): Option[server.Route] = {
+    getActiveRestService(pluginID, registryID).map(_.route)
+  }
+
+  def getPluginsState: PluginState = PluginState(
+    PLUGIN_STORE.values.map {
+      case x: PluginInstalled => PluginProxy(x.id, Option(x.installedDate), true, x.active, x.registry.keys.toList)
+      case x: PluginUninstalled => PluginProxy(x.id, None, false, false, Nil)
+    }.toList
   )
 
   def taskStopWatch(): Unit = {
