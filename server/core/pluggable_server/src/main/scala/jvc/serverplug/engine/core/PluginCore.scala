@@ -22,8 +22,11 @@ trait PluginCore extends LazyLogging with PluginImplicitsSupport {
 
   val TIMER: Timer = new Timer()
   val PLUGIN_PATH: String = sys.props.getOrElse("pluginPath", "plugins")
+  val POLLING_TIMEOUT: Int = sys.props.getOrElse("pollingTimeout", "3000").toInt
   val PLUGIN_STORE: mutable.ParMap[PluginID, Plugin] = ParMap.empty
-  logger.info(PLUGIN_PATH)
+
+  logger.info(s"Reading plugins from: $PLUGIN_PATH")
+  logger.info(s"Polling timeout: $POLLING_TIMEOUT")
 
   def getActiveService(pluginID: PluginID, registryID: RegistryID): Option[Registry] = {
     PLUGIN_STORE.get(pluginID).collect { case x: PluginInstalled => x }.filter(_.active).flatMap(_.registry.get(registryID))
@@ -131,13 +134,11 @@ trait PluginCore extends LazyLogging with PluginImplicitsSupport {
             val toAdd: Set[PluginID] = modules.diff(stored)
             toRemove.foreach(x => taskRemoveEntry(x, true))
             toAdd.foreach(x => taskAvailablePlugin(x))
-            logger.info(s"Added: ${toAdd.mkString(",")} ")
-            logger.info(s"Removed: ${toRemove.mkString(",")} ")
           }
         }
       },
-      3000,
-      3000
+      POLLING_TIMEOUT,
+      POLLING_TIMEOUT
     )
   }
 
