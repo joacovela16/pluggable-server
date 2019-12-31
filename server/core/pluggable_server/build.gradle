@@ -1,3 +1,4 @@
+import org.apache.tools.ant.taskdefs.condition.Os
 dependencies {
     compile project(":core:pluggable_sdk")
     compile "de.heikoseeberger:akka-http-circe_2.12:1.30.0"
@@ -10,12 +11,35 @@ dependencies {
 
 }
 
+
+task javascript(type: Exec) {
+    workingDir "$rootDir.parent/client"
+
+    if (Os.isFamily(Os.FAMILY_WINDOWS)) {
+        commandLine "npm.cmd"
+    }else {
+        commandLine "npm"
+    }
+
+    args "run", "prod-build"
+    standardOutput = new ByteArrayOutputStream()
+    ext.output = {
+        return standardOutput.toString()
+    }
+}
+
 jar {
+
+    dependsOn javascript
+
+    into ("/app"){
+        from fileTree("$rootDir.parent/client/dist")
+    }
+
     manifest {
         attributes(
                 'Class-Path': configurations.runtime.collect { x -> "libs/$x.name" }.join(' '),
-                'Main-Class': 'jvc.serverplug.engine.Main'
+                'Main-Class': 'jsoft.plugserver.engine.Main'
         )
     }
-
 }

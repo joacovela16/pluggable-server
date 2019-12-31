@@ -1,3 +1,5 @@
+//noinspection CssUnknownTarget
+@import "~@fortawesome/fontawesome-free/css/all.min.css";
 @import "node_modules/bulma/bulma";
 
 html, body {
@@ -10,4 +12,8 @@ html {
   background: url(
   data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAGElEQVQImWP4+vXrfwZ0gFMQHeNWiS4GAJ9KIs9KDDkPAAAAAElFTkSuQmCC
   ) repeat;
+}
+
+.has-pointer{
+  cursor: pointer;
 }

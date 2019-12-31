@@ -1,4 +1,4 @@
-package jvc.prototype.pluggable.sdk
+package jsoft.plugserver.sdk
 
 import com.typesafe.scalalogging.LazyLogging
 

@@ -1,4 +1,4 @@
-package jvc.prototype.pluggable.sdk
+package jsoft.plugserver.sdk
 
 import akka.http.scaladsl.server.Route
 

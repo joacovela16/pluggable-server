@@ -1,3 +1,3 @@
-package jvc.serverplug.engine.model
+package jsoft.plugserver.engine.model
 
 case class PluginState(plugins: Seq[PluginProxy])

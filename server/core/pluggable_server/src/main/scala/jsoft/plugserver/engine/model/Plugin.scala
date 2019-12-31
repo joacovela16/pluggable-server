@@ -1,11 +1,11 @@
-package jvc.serverplug.engine.model
+package jsoft.plugserver.engine.model
 
 import java.net.URL
 import java.util.ServiceLoader
 
 import akka.http.scaladsl.model.DateTime
-import jvc.prototype.pluggable.sdk.Registry
-import jvc.serverplug.engine.model.Types.{PluginID, RegistryID}
+import jsoft.plugserver.sdk.Registry
+import Types.{PluginID, RegistryID}
 import org.apache.xbean.classloader.JarFileClassLoader
 
 import scala.collection.parallel.mutable

@@ -1,5 +1,5 @@
 import "./App.scss";
-import "@fortawesome/fontawesome-free/js/all.min";
+// import "@fortawesome/fontawesome-free/js/all.min";
 import App from "./App.svelte";
 
 document.body.innerHTML="";

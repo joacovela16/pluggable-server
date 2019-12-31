@@ -7,7 +7,7 @@ repositories {
 
 subprojects {
     version = "1.0"
-    group = "jvc.prototype"
+    group = "jsoft.plugserver"
 
     apply plugin: 'scala'
 
@@ -27,8 +27,7 @@ subprojects {
     def displayName = project.displayName
 
     if (displayName.contains(":module:")) {
-
-
+        
         task copyJar(type: Copy, dependsOn: build) {
             into "$rootProject.buildDir/plugins/$project.name"
             from project.jar
@@ -46,7 +45,7 @@ subprojects {
 
 project(":core:pluggable_server") {
 
-    task copyJar(type: Copy, dependsOn: build) {
+    task copyJar(type: Copy, dependsOn: [build, jar]) {
         into "$rootProject.buildDir"
         from project.jar
     }
@@ -58,7 +57,6 @@ project(":core:pluggable_server") {
 }
 
 task prepare(dependsOn: subprojects.findAll { it.tasks.hasProperty("prepare") }.collect { it.tasks.prepare }) {
-
 }
 
 

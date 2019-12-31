@@ -1,9 +1,9 @@
-package jvc.serverplug.engine.util
+package jsoft.plugserver.engine.util
 
 import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.{Directives, Route}
 import com.typesafe.scalalogging.LazyLogging
-import jvc.serverplug.engine.model.PluginInstalled
+import jsoft.plugserver.engine.model.PluginInstalled
 
 import scala.concurrent.Future
 import scala.language.implicitConversions

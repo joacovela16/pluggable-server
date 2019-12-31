@@ -2,7 +2,7 @@ package jvc.prototype.sub
 
 import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.{Directives, Route}
-import jvc.prototype.pluggable.sdk.RestRegistry
+import jsoft.plugserver.sdk.RestRegistry
 
 class JoaquinRecord extends RestRegistry with Directives {
 

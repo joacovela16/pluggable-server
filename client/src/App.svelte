@@ -1,5 +1,6 @@
 <script>
     import Axios from "axios";
+    import Loader from "./Loader.svelte";
 
     /** @type {Promise<PluginProxy[]>} **/
     let data;
@@ -36,6 +37,11 @@
         return str.charAt(0).toUpperCase() + str.slice(1);
     }
 
+    function hideCard(e){
+        let children = e.currentTarget.parentNode.children;
+        children[1].classList.toggle("is-hidden");
+    }
+
     reloadData()
 </script>
 <section class="hero has-background-black">
@@ -48,16 +54,17 @@
 <section class="section">
     {#if data}
         {#await data}
+            <Loader/>
         {:then xs}
             <div class="columns is-multiline">
                 {#each xs as item, index (item.id)}
                     <div class="column is-offset-3 is-6">
                         {#if item.installed}
-                            <div class="card">
-                                <header class="card-header">
+                            <div class="card has-pointer">
+                                <header class="card-header" on:click={hideCard}>
                                     <p class="card-header-title">{capitalize(item.id)}</p>
                                 </header>
-                                <div class="card-content">
+                                <div class="card-content is-hidden">
                                     <div class="content">
                                         <div class="field is-grouped is-grouped-multiline">
                                             <div class="control">

@@ -1,4 +1,4 @@
-package jvc.serverplug.engine.core
+package jsoft.plugserver.engine.core
 
 import java.io.{File, FileFilter, FilenameFilter}
 import java.net.URL
@@ -7,10 +7,11 @@ import java.util.{Timer, TimerTask}
 import akka.http.scaladsl.model.DateTime
 import akka.http.scaladsl.server
 import com.typesafe.scalalogging.LazyLogging
-import jvc.prototype.pluggable.sdk.{Registry, RestRegistry}
-import jvc.serverplug.engine.model.Types.{PluginID, RegistryID}
-import jvc.serverplug.engine.model._
-import jvc.serverplug.engine.util.PluginImplicitsSupport
+import jsoft.plugserver.engine.model
+import jsoft.plugserver.engine.model.{Plugin, PluginInstalled, PluginProxy, PluginState, PluginUninstalled}
+import jsoft.plugserver.sdk.{Registry, RestRegistry}
+import jsoft.plugserver.engine.model.Types.{PluginID, RegistryID}
+import jsoft.plugserver.engine.util.PluginImplicitsSupport
 
 import scala.collection.parallel.{ParSet, mutable}
 import scala.collection.parallel.mutable.ParMap
@@ -66,7 +67,7 @@ trait PluginCore extends LazyLogging with PluginImplicitsSupport {
       }
       .foreach { urls =>
 
-        val installed: PluginInstalled = PluginInstalled(pluginID, DateTime.now, urls, installing)
+        val installed: PluginInstalled = model.PluginInstalled(pluginID, DateTime.now, urls, installing)
         PLUGIN_STORE.put(pluginID, installed)
         if (installing) {
           installed.registry.map { case (_, v) => v.onStart() }
@@ -80,7 +81,7 @@ trait PluginCore extends LazyLogging with PluginImplicitsSupport {
       if (delete) {
         PLUGIN_STORE -= pluginId
       } else {
-        PLUGIN_STORE.put(pluginId, PluginUninstalled(pluginId))
+        PLUGIN_STORE.put(pluginId, model.PluginUninstalled(pluginId))
       }
 
       x match {

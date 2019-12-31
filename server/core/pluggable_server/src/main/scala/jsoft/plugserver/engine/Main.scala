@@ -1,21 +1,22 @@
-package jvc.serverplug.engine
+package jsoft.plugserver.engine
 
 import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.{HttpApp, Route}
 import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport
 import io.circe.generic.auto._
-import jvc.serverplug.engine.core.PluginCore
-import jvc.serverplug.engine.util.PluginImplicitsSupport
+import jsoft.plugserver.engine.core.PluginCore
+import jsoft.plugserver.engine.util.PluginImplicitsSupport
+
 
 object Main extends HttpApp with FailFastCirceSupport with PluginImplicitsSupport with PluginCore {
 
   override protected def routes: Route = {
     path("app") {
       pathEnd {
-        get(getFromResource("web/index.html"))
+        get(getFromResource("app/index.html"))
       }
     } ~
-      path("app" / Segment) { r => get(getFromResource(s"web/$r")) } ~
+      path("app" / Segment) { r => get(getFromResource(s"app/$r")) } ~
       path("state") {
         get(complete(StatusCodes.OK, getPluginsState))
       } ~
