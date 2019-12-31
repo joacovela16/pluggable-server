@@ -1,5 +1,7 @@
+import "@fortawesome/fontawesome-free/css/all.min.css";
 import "./App.scss";
-// import "@fortawesome/fontawesome-free/js/all.min";
+import "bulma/bulma.sass";
+
 import App from "./App.svelte";
 
 document.body.innerHTML="";

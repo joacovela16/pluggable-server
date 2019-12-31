@@ -7,6 +7,7 @@
     </div>
 </div>
 <style type="text/scss">
+
     .loader-modal {
         position: absolute;
         top: 0;

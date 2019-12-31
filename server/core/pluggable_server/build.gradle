@@ -18,10 +18,10 @@ task javascript(type: Exec) {
     if (Os.isFamily(Os.FAMILY_WINDOWS)) {
         commandLine "npm.cmd"
     }else {
-        commandLine "npm"
+        commandLine "bash"
     }
 
-    args "run", "prod-build"
+    args "-c", "npm install && npm run prod-build"
     standardOutput = new ByteArrayOutputStream()
     ext.output = {
         return standardOutput.toString()
