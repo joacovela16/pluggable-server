@@ -4,9 +4,11 @@ html, body {
   padding: 0;
   margin: 0;
   overflow: auto;
+  height: 100%;
+  width: 100%;
 }
 
-html {
+body {
   background: url(
   data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAGElEQVQImWP4+vXrfwZ0gFMQHeNWiS4GAJ9KIs9KDDkPAAAAAElFTkSuQmCC
   ) repeat;
