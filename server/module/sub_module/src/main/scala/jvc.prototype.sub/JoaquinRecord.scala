@@ -2,9 +2,9 @@ package jvc.prototype.sub
 
 import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.{Directives, Route}
-import jsoft.plugserver.sdk.RestRegistry
+import jsoft.plugserver.sdk.RestService
 
-class JoaquinRecord extends RestRegistry with Directives {
+class JoaquinRecord extends RestService with Directives {
 
   override def route: Route = get {
     import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics

@@ -1,4 +1,5 @@
 import org.apache.tools.ant.taskdefs.condition.Os
+
 dependencies {
     compile project(":core:pluggable_sdk")
     compile "de.heikoseeberger:akka-http-circe_2.12:1.30.0"
@@ -7,32 +8,56 @@ dependencies {
     compile "io.circe:circe-parser_2.12:0.12.3"
     // https://mvnrepository.com/artifact/org.apache.xbean/xbean-classloader
     compile group: 'org.apache.xbean', name: 'xbean-classloader', version: '4.15'
-
-
 }
 
 
-task javascript(type: Exec) {
+task buildClient(type: Exec) {
     workingDir "$rootDir.parent/client"
 
     if (Os.isFamily(Os.FAMILY_WINDOWS)) {
-        commandLine "npm.cmd"
-    }else {
+        commandLine "cmd.exe"
+        args "/c", "npm install && npm run prod-build"
+    } else {
         commandLine "bash"
+        args "-c", "npm install && npm run prod-build"
     }
 
-    args "-c", "npm install && npm run prod-build"
     standardOutput = new ByteArrayOutputStream()
     ext.output = {
         return standardOutput.toString()
     }
 }
 
-jar {
+task fastCompile(type: Jar) {
+    into("/app") {
+        from fileTree("$rootDir.parent/client/dist")
+    }
 
-    dependsOn javascript
+    manifest {
+        attributes(
+                'Class-Path': configurations.runtime.collect { x -> "libs/$x.name" }.join(' '),
+                'Main-Class': 'jsoft.plugserver.engine.Main'
+        )
+    }
+    with jar
+}
 
-    into ("/app"){
+task buildClientAndPrepareJar(type: Jar, dependsOn: buildClient) {
+    into("/app") {
+        from fileTree("$rootDir.parent/client/dist")
+    }
+
+    manifest {
+        attributes(
+                'Class-Path': configurations.runtime.collect { x -> "libs/$x.name" }.join(' '),
+                'Main-Class': 'jsoft.plugserver.engine.Main'
+        )
+    }
+    with jar
+}
+
+jar{
+    into("/app") {
         from fileTree("$rootDir.parent/client/dist")
     }
 

@@ -1,4 +1,6 @@
-@import "node_modules/bulma/bulma";
+//noinspection CssUnknownTarget
+@import "~@fortawesome/fontawesome-free/css/all.min.css";
+@import "~bulma/bulma";
 
 html, body {
   padding: 0;
@@ -8,12 +10,12 @@ html, body {
   width: 100%;
 }
 
-body {
-  background: url(
-  data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAGElEQVQImWP4+vXrfwZ0gFMQHeNWiS4GAJ9KIs9KDDkPAAAAAElFTkSuQmCC
-  ) repeat;
+.has-pointer {
+  cursor: pointer;
 }
 
-.has-pointer{
-  cursor: pointer;
+.is-vertical-align {
+  > td {
+    vertical-align: middle;
+  }
 }

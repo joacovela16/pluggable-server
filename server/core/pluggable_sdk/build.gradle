@@ -1,8 +1,6 @@
-configurations {
-
-}
-
 dependencies {
     compile group: 'com.typesafe.akka', name: 'akka-stream_2.12', version: '2.6.1'
     compile group: 'com.typesafe.akka', name: 'akka-http_2.12', version: '10.1.11'
+    compile "ch.qos.logback:logback-classic:1.2.3"
+    compile "com.typesafe.scala-logging:scala-logging_2.12:3.9.2"
 }

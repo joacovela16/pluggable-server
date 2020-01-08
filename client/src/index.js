@@ -1,6 +1,4 @@
-import "@fortawesome/fontawesome-free/css/all.min.css";
 import "./App.scss";
-import "bulma/bulma.sass";
 
 import App from "./App.svelte";
 
@@ -11,5 +9,4 @@ const app = new App({
     props: {
     },
 });
-
 export default app;

@@ -1,3 +1,3 @@
 package jsoft.plugserver.engine.model
 
-case class PluginState(plugins: Seq[PluginProxy])
+case class PluginState(plugins: Seq[PluginInfo])

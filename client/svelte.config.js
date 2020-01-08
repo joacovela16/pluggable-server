@@ -1,5 +1,5 @@
-const {scss}=  require("svelte-preprocess");
+const autoPreprocess =  require("svelte-preprocess");
 
 module.exports= {
-    preprocess: scss()
+    preprocess: autoPreprocess()
 };

@@ -1,4 +1,5 @@
 rootProject.name = "pluggable-server"
 include ":module:sub_module"
+include ":module:sub_module_1"
 include ":core:pluggable_server"
 include ":core:pluggable_sdk"

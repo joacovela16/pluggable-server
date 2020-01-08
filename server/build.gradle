@@ -10,8 +10,10 @@ subprojects {
     group = "jsoft.plugserver"
 
     apply plugin: 'scala'
+    apply plugin: "maven"
 
     repositories {
+        mavenLocal()
         mavenCentral()
         maven {
             url "https://mvnrepository.com/artifact"
@@ -20,8 +22,6 @@ subprojects {
 
     dependencies {
         compile "org.scala-lang:scala-compiler:2.12.10"
-        compile "ch.qos.logback:logback-classic:1.2.3"
-        compile "com.typesafe.scala-logging:scala-logging_2.12:3.9.2"
     }
 
     def displayName = project.displayName
@@ -57,6 +57,27 @@ project(":core:pluggable_server") {
 }
 
 task prepare(dependsOn: subprojects.findAll { it.tasks.hasProperty("prepare") }.collect { it.tasks.prepare }) {
+}
+
+task fastCompile(){
+    /*println(
+            subprojects
+                    .collect { it.tasks.collect {it.name} }.flatten()
+    )*/
+
+  /*  def add = {
+        def collect = subprojects.findAll { it.displayName.contains(":module:") }.collect { "$it.displayName:prepare".toString() }.flatten()
+        collect.add("hola")
+        return collect
+    }
+    println(
+            add
+    )
+*/
+    dependsOn subprojects
+            .findAll { it.tasks.hasProperty("prepare") }
+            .collect { it.tasks.prepare }
+
 }
 
 

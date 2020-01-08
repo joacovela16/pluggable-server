@@ -7,37 +7,37 @@ import io.circe.generic.auto._
 import jsoft.plugserver.engine.core.PluginCore
 import jsoft.plugserver.engine.util.PluginImplicitsSupport
 
-
 object Main extends HttpApp with FailFastCirceSupport with PluginImplicitsSupport with PluginCore {
 
-  override protected def routes: Route = {
-    path("app") {
-      pathEnd {
+  override protected def routes: Route = concat(
+    (get & pathPrefix("app")) {
+      pathEndOrSingleSlash {
         get(getFromResource("app/index.html"))
-      }
-    } ~
-      path("app" / Segment) { r => get(getFromResource(s"app/$r")) } ~
-      path("state") {
-        get(complete(StatusCodes.OK, getPluginsState))
       } ~
-      path("plugin" / Segment / Segment / "reload") { (pluginID, registryID) =>
-        get(reloadService(pluginID, registryID))
-      } ~
-      path("plugin" / Segment / Segment) { (pluginId, action) =>
-        get {
-          action match {
-            case "enable" => pluginAsEnable(pluginId)
-            case "disable" => pluginAsDisable(pluginId)
-            case "install" => taskAddEntry(pluginId, true)
-            case "uninstall" => taskRemoveEntry(pluginId)
-            case _ => complete(StatusCodes.BadRequest, "Undefined operation")
-          }
+        getFromResourceDirectory("app")
+    },
+    path("state") {
+      get(complete(StatusCodes.OK, getPluginsState))
+    },
+    path("config" / "plugin" / Segment / Segment / "reload") { (pluginID, serviceID) =>
+      get(reloadService(pluginID, serviceID))
+    },
+    path("config" / "plugin" / Segment / Segment) { (pluginId, action) =>
+      get {
+        action match {
+          case "enable" => pluginAsEnable(pluginId)
+          case "disable" => pluginAsDisable(pluginId)
+          case "install" => taskAddEntry(pluginId, installing = true)
+          case "uninstall" => taskRemoveEntry(pluginId)
+          case _ => complete(StatusCodes.BadRequest, "Undefined operation")
         }
-      } ~
-      path("service" / Segment / Segment) { (pluginID, registryID) =>
-        redirectToService(pluginID, registryID).getOrElse(complete(StatusCodes.NotFound))
       }
-  }
+    },
+    path("config" / "service" / Segment / Segment / Segment) { (pluginID, serviceID, action) => taskServiceStatus(pluginID, serviceID, action) },
+    path("service" / Segment / Segment) { (pluginID, registryID) =>
+      redirectToService(pluginID, registryID).getOrElse(complete(StatusCodes.NotFound))
+    }
+  )
 
   def main(args: Array[String]): Unit = {
     taskLoadCreated()

@@ -2,7 +2,7 @@ package jsoft.plugserver.sdk
 
 import com.typesafe.scalalogging.LazyLogging
 
-trait Registry extends LazyLogging {
+trait Service extends LazyLogging {
 
   def identifier: String
 

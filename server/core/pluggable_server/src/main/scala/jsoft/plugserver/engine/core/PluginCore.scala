@@ -4,17 +4,17 @@ import java.io.{File, FileFilter, FilenameFilter}
 import java.net.URL
 import java.util.{Timer, TimerTask}
 
-import akka.http.scaladsl.model.DateTime
-import akka.http.scaladsl.server
+import akka.http.scaladsl.model.{DateTime, StatusCodes}
+import akka.http.scaladsl.server.Route
 import com.typesafe.scalalogging.LazyLogging
 import jsoft.plugserver.engine.model
-import jsoft.plugserver.engine.model.{Plugin, PluginInstalled, PluginProxy, PluginState, PluginUninstalled}
-import jsoft.plugserver.sdk.{Registry, RestRegistry}
-import jsoft.plugserver.engine.model.Types.{PluginID, RegistryID}
+import jsoft.plugserver.engine.model.Types.{PluginID, ServiceID}
+import jsoft.plugserver.engine.model._
 import jsoft.plugserver.engine.util.PluginImplicitsSupport
+import jsoft.plugserver.sdk.{RestService, Service}
 
-import scala.collection.parallel.{ParSet, mutable}
 import scala.collection.parallel.mutable.ParMap
+import scala.collection.parallel.{ParSet, mutable}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.util.{Failure, Try}
@@ -26,14 +26,14 @@ trait PluginCore extends LazyLogging with PluginImplicitsSupport {
   val POLLING_TIMEOUT: Int = sys.props.getOrElse("pollingTimeout", "3000").toInt
   val PLUGIN_STORE: mutable.ParMap[PluginID, Plugin] = ParMap.empty
 
-  logger.info(s"Reading plugins from: $PLUGIN_PATH")
-  logger.info(s"Polling timeout: $POLLING_TIMEOUT")
+  logger.info(s"Config: Reading plugins from: $PLUGIN_PATH")
+  logger.info(s"Config: Polling timeout: $POLLING_TIMEOUT")
 
-  def getActiveService(pluginID: PluginID, registryID: RegistryID): Option[Registry] = {
-    PLUGIN_STORE.get(pluginID).collect { case x: PluginInstalled => x }.filter(_.active).flatMap(_.registry.get(registryID))
+  def getActiveService(pluginID: PluginID, serviceID: ServiceID): Option[Service] = {
+    PLUGIN_STORE.get(pluginID).collect { case x: PluginInstalled => x }.filter(_.active).flatMap(_.registry.get(serviceID)).filter(_.active).map(_.registry)
   }
 
-  def getActiveRestService(pluginID: PluginID, registryID: RegistryID): Option[RestRegistry] = getActiveService(pluginID, registryID).collect { case x: RestRegistry => x }
+  def getActiveRestService(pluginID: PluginID, serviceID: ServiceID): Option[RestService] = getActiveService(pluginID, serviceID).collect { case x: RestService => x }
 
   def getPlugin(pluginID: PluginID): Option[PluginInstalled] = PLUGIN_STORE.get(pluginID).collect { case x: PluginInstalled => x }
 
@@ -67,10 +67,10 @@ trait PluginCore extends LazyLogging with PluginImplicitsSupport {
       }
       .foreach { urls =>
 
-        val installed: PluginInstalled = model.PluginInstalled(pluginID, DateTime.now, urls, installing)
+        val installed: PluginInstalled = PluginInstalled(pluginID, DateTime.now, urls, installing)
         PLUGIN_STORE.put(pluginID, installed)
         if (installing) {
-          installed.registry.map { case (_, v) => v.onStart() }
+          installed.registry.map { case (_, v) => v.registry.onStart() }
         }
       }
   }
@@ -88,7 +88,7 @@ trait PluginCore extends LazyLogging with PluginImplicitsSupport {
         case plugin: PluginInstalled =>
 
           plugin.registry.values.foreach { x =>
-            Future(x.onDestroy()).onComplete {
+            Future(x.registry.onDestroy()).onComplete {
               case Failure(exception) => logger.error(exception.getLocalizedMessage, exception)
               case _ =>
             }
@@ -111,7 +111,7 @@ trait PluginCore extends LazyLogging with PluginImplicitsSupport {
     val file: File = new File(PLUGIN_PATH)
 
     if (file.exists()) {
-      file.listFiles().filter(_.isDirectory).foreach(x => taskAddEntry(x.getName, true))
+      file.listFiles().filter(_.isDirectory).foreach(x => taskAddEntry(x.getName, installing = true))
     }
   }
 
@@ -133,7 +133,7 @@ trait PluginCore extends LazyLogging with PluginImplicitsSupport {
             val stored: ParSet[PluginID] = PLUGIN_STORE.keySet
             val toRemove: ParSet[PluginID] = if (stored.nonEmpty && modules.isEmpty) stored else stored.diff(modules)
             val toAdd: Set[PluginID] = modules.diff(stored)
-            toRemove.foreach(x => taskRemoveEntry(x, true))
+            toRemove.foreach(x => taskRemoveEntry(x, delete = true))
             toAdd.foreach(x => taskAvailablePlugin(x))
           }
         }
@@ -146,32 +146,59 @@ trait PluginCore extends LazyLogging with PluginImplicitsSupport {
   def pluginAsEnable(pluginID: PluginID): Future[Unit] = Future {
     getPlugin(pluginID).foreach { x =>
       PLUGIN_STORE.put(pluginID, x.asEnable)
-      x.registry.foreach { case (_, v) => v.onActive() }
+      x.registry.foreach { case (_, v) => v.registry.onActive() }
     }
   }
 
   def pluginAsDisable(pluginID: PluginID): Future[Unit] = Future {
     getPlugin(pluginID).foreach { x =>
       PLUGIN_STORE.put(pluginID, x.asDisable)
-      x.registry.foreach { case (_, v) => v.onSuspend() }
+      x.registry.foreach { case (_, v) => v.registry.onSuspend() }
     }
   }
 
-  def reloadService(pluginID: PluginID, registryID: RegistryID): Future[Unit] = Future {
-    getActiveService(pluginID, registryID).foreach { reg =>
+  def reloadService(pluginID: PluginID, serviceID: ServiceID): Future[Unit] = Future {
+    getActiveService(pluginID, serviceID).foreach { reg =>
       reg.onDestroy()
       reg.onStart()
     }
   }
 
-  def redirectToService(pluginID: PluginID, registryID: RegistryID): Option[server.Route] = {
-    getActiveRestService(pluginID, registryID).map(_.route)
+  def taskServiceStatus(pluginID: PluginID, serviceID: ServiceID, action: String): Option[Route] = {
+    getPlugin(pluginID)
+      .map { plugin =>
+
+        plugin.registry.get(serviceID) match {
+          case Some(srv) =>
+
+            action match {
+              case "enable" => plugin.registry.put(serviceID, ServiceProxy(srv.registry))
+              case "disable" => plugin.registry.put(serviceID, ServiceProxy(srv.registry, active = false))
+              case _ => complete(StatusCodes.BadRequest, s"Action '$action' no suported.")
+            }
+
+            complete(StatusCodes.OK)
+
+          case None => complete(StatusCodes.NotFound)
+        }
+      }
+  }
+
+  def redirectToService(pluginID: PluginID, serviceID: ServiceID): Option[Route] = {
+    getActiveRestService(pluginID, serviceID).map(_.route)
   }
 
   def getPluginsState: PluginState = PluginState(
     PLUGIN_STORE.values.map {
-      case x: PluginInstalled => PluginProxy(x.id, Option(x.installedDate), true, x.active, x.registry.keys.toList)
-      case x: PluginUninstalled => PluginProxy(x.id, None, false, false, Nil)
+      case x: PluginInstalled =>
+        PluginInfo(
+          x.id,
+          Option(x.installedDate),
+          installed = true,
+          active = x.active,
+          x.registry.map { case (k, v) => ServiceInfo(k, v.active) }.toList
+        )
+      case x: PluginUninstalled => PluginInfo(x.id, None, installed = false, active = false, Nil)
     }.toList
   )
 
