@@ -21,7 +21,7 @@ subprojects {
     }
 
     dependencies {
-        compile "org.scala-lang:scala-compiler:2.12.10"
+        runtime "org.scala-lang:scala-compiler:2.12.10"
     }
 
     def displayName = project.displayName

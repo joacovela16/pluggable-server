@@ -1,5 +1,5 @@
 dependencies {
-    compile project(":core:pluggable_sdk")
+    implementation project(":core:pluggable_sdk")
     compile "ch.qos.logback:logback-classic:1.2.3"
     compile "com.typesafe.scala-logging:scala-logging_2.12:3.9.2"
 }

@@ -9,6 +9,7 @@
     let data;
     let serviceModalVisible = false;
     let pluginSelected;
+    let file;
 
     function reloadData() {
         data = Axios.get(`${HOST}/state`)
@@ -60,6 +61,21 @@
         Axios.get(`${HOST}/config/service/${pluginId}/${serviceId}/${action}`).then(() => reloadData())
     }
 
+    function targetFile(event) {
+        file = event.target.files[0];
+    }
+
+    function sendModule() {
+        let formData = new FormData();
+        formData.append("file", file);
+
+        Axios.post(`${HOST}/upload`, formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data'
+            }
+        })
+    }
+
     reloadData()
 </script>
 <nav class="navbar is-black">
@@ -73,16 +89,20 @@
             <div class="navbar-item">
                 <div class="field has-addons">
                     <div class="control">
-                        <button class="button is-small" title="Upload module" on:click={()=>serviceModalVisible=true}>
-                            <span class="icon"><i class="fas fa-upload"></i></span>
-                        </button>
+                        <input class="input is-small" type="file" name="resume" on:change={(e)=> targetFile(e)}>
                     </div>
-                    <div class="control">
-                        <button class="button is-small" title="Refresh">
-                            <span class="icon"><i class="fas fa-sync-alt"></i></span>
-                        </button>
-                    </div>
+                    {#if file}
+                        <div class="control">
+                            <div class="button is-small is-primary" on:click={()=>sendModule()}>Send</div>
+                        </div>
+                    {/if}
                 </div>
+            </div>
+            <div class="navbar-item">
+                <button class="button is-small" title="Refresh">
+                    <span class="icon"><i class="fas fa-sync-alt"></i></span>
+                    <span>Reload</span>
+                </button>
             </div>
         </div>
     </div>
