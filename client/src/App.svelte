@@ -102,7 +102,7 @@
             <div class="level-item">
                 <button class="button is-small" title="Update modules" on:click={()=>uploadModalVisible=true}>
                     <span class="icon"><i class="fas fa-upload"></i></span>
-                    <span>Upload</span>
+                    <span>Install</span>
                 </button>
             </div>
             <div class="level-item">
@@ -115,7 +115,7 @@
     </nav>
 </div>
 <Modal bind:visible={uploadModalVisible}>
-    <span slot="title">Upload modules</span>
+    <span slot="title">Install modules</span>
     <div slot="body">
         <div class="tags">
             {#each (files||[]) as item}
@@ -167,13 +167,13 @@
                                 {#if item.active === true}
                                     <div class="control">
                                         <button class="button is-small" title="Suspend service" on:click={()=>changeServiceState(pluginSelected.id, item.id, 'disable')}>
-                                            <span class="icon is-large"><i class="fa fa-toggle-on"></i></span>
+                                            <span class="icon is-large"><i class="fa fa-plug"></i></span>
                                         </button>
                                     </div>
                                 {:else}
                                     <div class="control">
                                         <button class="button is-small" title="Active service" on:click={()=>changeServiceState(pluginSelected.id, item.id, 'enable')}>
-                                            <span class="icon is-large"><i class="fa fa-toggle-off"></i></span>
+                                            <span class="icon is-large"><i class="fa fa-power-off"></i></span>
                                         </button>
                                     </div>
                                 {/if}
@@ -211,34 +211,34 @@
                                 <td class="has-pointer">{item.id}</td>
                                 <td class="has-pointer">
                                     {#if item.installed}
-                                        <p>{(item.active && "Enable") || "Disable" }</p>
+                                        <p>{(item.active && "Active") || "Disable" }</p>
                                     {:else}
                                         <p>Unplugged</p>
                                     {/if}
                                 </td>
                                 <td style="width: 1%; white-space: nowrap;">
-                                    <div class="field has-addons">
+                                    <div class="field has-addons is-pulled-right">
                                         {#if item.installed}
-                                            <div class="control">
-                                                <button class="button is-small" title="Show details" on:click="{()=> {pluginSelected = item; serviceModalVisible=true;}}">
-                                                    <span class="icon "><i class="fas fa-folder-open"></i></span>
-                                                </button>
-                                            </div>
                                             {#if item.active}
+                                                <div class="control">
+                                                    <button class="button is-small" title="Show details" on:click="{()=> {pluginSelected = item; serviceModalVisible=true;}}">
+                                                        <span class="icon "><i class="fas fa-folder-open"></i></span>
+                                                    </button>
+                                                </div>
                                                 <div class="control">
                                                     <button class="button is-small" title="Reload" onClick={() => reloadPlugin(item)}>
                                                         <span class="icon "><i class="fas fa-sync-alt"></i></span>
                                                     </button>
                                                 </div>
                                                 <div class="control">
-                                                    <button class="button is-small is-warning" title="Suspend" on:click={()=>updatePlugin(item, "disable")}>
-                                                        <span class="icon"><i class="fas fa-angle-double-down"></i></span>
+                                                    <button class="button is-small" title="Unplug" on:click={()=>updatePlugin(item, "disable")}>
+                                                        <span class="icon"><i class="fas fa-power-off"></i></span>
                                                     </button>
                                                 </div>
                                             {:else}
                                                 <div class="control">
-                                                    <button class="button is-small is-success" title="Enable" on:click={()=>updatePlugin(item,  "enable")}>
-                                                        <span class="icon"><i class="fas fa-angle-double-up"></i></span>
+                                                    <button class="button is-small" title="Plug" on:click={()=>updatePlugin(item,  "enable")}>
+                                                        <span class="icon"><i class="fas fa-plug"></i></span>
                                                     </button>
                                                 </div>
                                             {/if}
@@ -275,7 +275,7 @@
 <style type="text/scss">
     .drop-zone {
         background: rgba(0, 0, 0, 0.1);
-        min-height: 20rem;
+        min-height: 15rem;
         border: 2px dashed rgba(0, 0, 0, 0.5);
     }
 </style>
