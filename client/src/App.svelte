@@ -69,11 +69,17 @@
         let formData = new FormData();
         formData.append("file", file);
 
-        Axios.post(`${HOST}/upload`, formData, {
-            headers: {
-                'Content-Type': 'multipart/form-data'
-            }
-        })
+        Axios
+                .post(`${HOST}/upload`, formData, {
+                    headers: {
+                        'Content-Type': 'multipart/form-data'
+                    }
+                })
+                .then(() => {
+
+                    file = undefined;
+                    setTimeout(() => reloadData(), 1000)
+                });
     }
 
     reloadData()

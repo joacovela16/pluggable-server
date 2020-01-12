@@ -21,13 +21,13 @@ subprojects {
     }
 
     dependencies {
-        runtime "org.scala-lang:scala-compiler:2.12.10"
+        implementation "org.scala-lang:scala-compiler:2.12.10"
     }
 
     def displayName = project.displayName
 
     if (displayName.contains(":module:")) {
-        
+
         task copyJar(type: Copy, dependsOn: build) {
             into "$rootProject.buildDir/plugins/$project.name"
             from project.jar
@@ -59,21 +59,8 @@ project(":core:pluggable_server") {
 task prepare(dependsOn: subprojects.findAll { it.tasks.hasProperty("prepare") }.collect { it.tasks.prepare }) {
 }
 
-task fastCompile(){
-    /*println(
-            subprojects
-                    .collect { it.tasks.collect {it.name} }.flatten()
-    )*/
+task fastCompile() {
 
-  /*  def add = {
-        def collect = subprojects.findAll { it.displayName.contains(":module:") }.collect { "$it.displayName:prepare".toString() }.flatten()
-        collect.add("hola")
-        return collect
-    }
-    println(
-            add
-    )
-*/
     dependsOn subprojects
             .findAll { it.tasks.hasProperty("prepare") }
             .collect { it.tasks.prepare }

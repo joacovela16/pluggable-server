@@ -1,6 +1,7 @@
 package jsoft.plugserver.engine
 
-import java.io.File
+import java.io.{File, FileInputStream, FileOutputStream}
+import java.util.zip.ZipInputStream
 
 import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.{HttpApp, Route}
@@ -9,6 +10,9 @@ import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport
 import io.circe.generic.auto._
 import jsoft.plugserver.engine.core.PluginCore
 import jsoft.plugserver.engine.util.PluginImplicitsSupport
+import net.lingala.zip4j.ZipFile
+
+import scala.util.{Failure, Success}
 
 object Main extends HttpApp with FailFastCirceSupport with PluginImplicitsSupport with PluginCore {
 
@@ -39,10 +43,27 @@ object Main extends HttpApp with FailFastCirceSupport with PluginImplicitsSuppor
       },
       path("upload") {
         withoutSizeLimit {
+          import scala.concurrent.ExecutionContext.Implicits.global
           storeUploadedFile("file", fileInfo => new File(s"$PLUGIN_PATH/${fileInfo.fileName}")) {
             case (fileInfo, file) =>
 
-              complete(StatusCodes.OK)
+              val module: String = fileInfo.fileName.substring(0, fileInfo.fileName.lastIndexOf("."))
+
+              onComplete{taskRemoveEntry(module)
+                .map{_ =>
+
+                  new ZipFile(file.getAbsolutePath).extractAll(s"$PLUGIN_PATH/")
+                  file.delete()
+
+                }
+                } {
+                case Failure(exception) =>
+                  logger.error(exception.getLocalizedMessage, exception)
+                  complete(StatusCodes.InternalServerError)
+                case _ =>complete(StatusCodes.OK)
+              }
+
+
           }
         }
       },
