@@ -167,13 +167,13 @@
                                 {#if item.active === true}
                                     <div class="control">
                                         <button class="button is-small" title="Suspend service" on:click={()=>changeServiceState(pluginSelected.id, item.id, 'disable')}>
-                                            <span class="icon is-large"><i class="fa fa-plug"></i></span>
+                                            <span class="icon is-large"><i class="fa fa-power-off"></i></span>
                                         </button>
                                     </div>
                                 {:else}
                                     <div class="control">
                                         <button class="button is-small" title="Active service" on:click={()=>changeServiceState(pluginSelected.id, item.id, 'enable')}>
-                                            <span class="icon is-large"><i class="fa fa-power-off"></i></span>
+                                            <span class="icon is-large"><i class="fa fa-plug"></i></span>
                                         </button>
                                     </div>
                                 {/if}
