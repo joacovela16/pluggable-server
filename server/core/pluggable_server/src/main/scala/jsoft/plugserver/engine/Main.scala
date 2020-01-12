@@ -1,22 +1,20 @@
 package jsoft.plugserver.engine
 
-import java.io.{File, FileInputStream, FileOutputStream}
-import java.util.zip.ZipInputStream
+import java.io.File
 
 import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.{HttpApp, Route}
-import ch.megard.akka.http.cors.scaladsl.CorsDirectives._
 import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport
 import io.circe.generic.auto._
 import jsoft.plugserver.engine.core.PluginCore
 import jsoft.plugserver.engine.util.PluginImplicitsSupport
 import net.lingala.zip4j.ZipFile
 
-import scala.util.{Failure, Success}
+import scala.util.Failure
 
 object Main extends HttpApp with FailFastCirceSupport with PluginImplicitsSupport with PluginCore {
 
-  override protected def routes: Route = cors() {
+  override protected def routes: Route ={
     concat(
       (get & pathPrefix("app")) {
         pathEndOrSingleSlash {
