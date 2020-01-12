@@ -10,6 +10,13 @@ html, body {
   width: 100%;
 }
 
+body{
+  box-shadow: 0 0 30px rgba(0,0,0,0.25) inset;
+  background:url(
+  data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAEElEQVQImWNgwAGkcEmQCQAIiQAbZeDsigAAAABJRU5ErkJggg==
+  ) repeat;
+}
+
 .has-pointer {
   cursor: pointer;
 }

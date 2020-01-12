@@ -12,6 +12,7 @@ import jsoft.plugserver.engine.model.Types.{PluginID, ServiceID}
 import jsoft.plugserver.engine.model._
 import jsoft.plugserver.engine.util.PluginImplicitsSupport
 import jsoft.plugserver.sdk.{RestService, Service}
+import org.apache.commons.io.FileUtils
 
 import scala.collection.parallel.mutable.ParMap
 import scala.collection.parallel.{ParSet, mutable}
@@ -42,17 +43,14 @@ trait PluginCore extends LazyLogging with PluginImplicitsSupport {
   }
 
   def taskAddEntry(pluginID: String, installing: Boolean = false): Future[Unit] = Future {
-
     Option(new File(s"$PLUGIN_PATH/$pluginID"))
       .flatMap { x =>
-
         x.listFiles() match {
           case Array(x, y) =>
 
             val (maybeJar, libs) = if (x.isFile) (x, y) else (y, x)
 
             if (maybeJar.getName.endsWith(".jar") && libs.isDirectory) {
-
               val libsUrl: Array[URL] = libs.listFiles(new FilenameFilter {
                 override def accept(dir: File, name: PluginID): Boolean = name.endsWith(".jar")
               }).map(x => x.toURI.toURL)
@@ -61,12 +59,10 @@ trait PluginCore extends LazyLogging with PluginImplicitsSupport {
             } else {
               None
             }
-
           case _ => None
         }
       }
       .foreach { urls =>
-
         val installed: PluginInstalled = PluginInstalled(pluginID, DateTime.now, urls, installing)
         PLUGIN_STORE.put(pluginID, installed)
         if (installing) {
@@ -75,9 +71,13 @@ trait PluginCore extends LazyLogging with PluginImplicitsSupport {
       }
   }
 
+  private def taskDestroyPlugin(pluginID: PluginID): Unit = {
+    val file: File = new File(s"$PLUGIN_PATH/$pluginID")
+    FileUtils.deleteDirectory(file)
+  }
+
   def taskRemoveEntry(pluginId: PluginID, delete: Boolean = false): Future[Unit] = Future {
     PLUGIN_STORE.get(pluginId).foreach { x =>
-
       if (delete) {
         PLUGIN_STORE -= pluginId
       } else {
@@ -101,10 +101,11 @@ trait PluginCore extends LazyLogging with PluginImplicitsSupport {
             case Failure(exception) => logger.error(exception.getLocalizedMessage, exception)
             case _ => System.gc()
           }
-
         case _ =>
       }
     }
+
+    if (delete) taskDestroyPlugin(pluginId)
   }
 
   def taskLoadCreated(): Unit = {
@@ -123,7 +124,6 @@ trait PluginCore extends LazyLogging with PluginImplicitsSupport {
 
           val file: File = new File(PLUGIN_PATH)
           if (file.exists() && file.isDirectory) {
-
             val modules: Set[PluginID] = file
               .listFiles(new FileFilter {
                 override def accept(pathname: File): Boolean = pathname.isDirectory
@@ -167,7 +167,6 @@ trait PluginCore extends LazyLogging with PluginImplicitsSupport {
   def taskServiceStatus(pluginID: PluginID, serviceID: ServiceID, action: String): Option[Route] = {
     getPlugin(pluginID)
       .map { plugin =>
-
         plugin.registry.get(serviceID) match {
           case Some(srv) =>
 
@@ -178,7 +177,6 @@ trait PluginCore extends LazyLogging with PluginImplicitsSupport {
             }
 
             complete(StatusCodes.OK)
-
           case None => complete(StatusCodes.NotFound)
         }
       }

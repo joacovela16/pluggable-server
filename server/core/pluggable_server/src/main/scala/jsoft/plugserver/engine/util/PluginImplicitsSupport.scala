@@ -21,12 +21,12 @@ trait PluginImplicitsSupport extends Directives with LazyLogging {
     }
   }
 
-  implicit def optionResponse[T](x:Option[Route]): Route = x.getOrElse(complete(StatusCodes.NotFound))
+  implicit def optionResponse[T](x: Option[Route]): Route = x.getOrElse(complete(StatusCodes.NotFound))
 
   implicit class PluginInstalledExt(x: PluginInstalled) {
-    def asEnable: PluginInstalled = PluginInstalled(x.id, x.installedDate, x.urls, true)
+    def asEnable: PluginInstalled = PluginInstalled(x.id, x.installedDate, x.urls, active = true)
 
-    def asDisable: PluginInstalled = PluginInstalled(x.id, x.installedDate, x.urls, false)
+    def asDisable: PluginInstalled = PluginInstalled(x.id, x.installedDate, x.urls, active = false)
   }
 
 }

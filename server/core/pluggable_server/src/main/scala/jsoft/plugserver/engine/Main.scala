@@ -37,6 +37,7 @@ object Main extends HttpApp with FailFastCirceSupport with PluginImplicitsSuppor
             case "disable" => pluginAsDisable(pluginId)
             case "install" => taskAddEntry(pluginId, installing = true)
             case "uninstall" => taskRemoveEntry(pluginId)
+            case "destroy" => taskRemoveEntry(pluginId, delete = true)
             case _ => complete(StatusCodes.BadRequest, "Undefined operation")
           }
         }
@@ -49,21 +50,18 @@ object Main extends HttpApp with FailFastCirceSupport with PluginImplicitsSuppor
 
               val module: String = fileInfo.fileName.substring(0, fileInfo.fileName.lastIndexOf("."))
 
-              onComplete{taskRemoveEntry(module)
-                .map{_ =>
-
-                  new ZipFile(file.getAbsolutePath).extractAll(s"$PLUGIN_PATH/")
-                  file.delete()
-
-                }
-                } {
+              onComplete {
+                taskRemoveEntry(module, delete = true)
+                  .map { _ =>
+                    new ZipFile(file.getAbsolutePath).extractAll(s"$PLUGIN_PATH/")
+                    file.delete()
+                  }
+              } {
                 case Failure(exception) =>
                   logger.error(exception.getLocalizedMessage, exception)
                   complete(StatusCodes.InternalServerError)
-                case _ =>complete(StatusCodes.OK)
+                case _ => complete(StatusCodes.OK)
               }
-
-
           }
         }
       },

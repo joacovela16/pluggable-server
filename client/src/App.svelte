@@ -2,14 +2,19 @@
     import Axios from "axios";
     import Loader from "./Loader.svelte";
     import Modal from "./Modal.svelte";
+    import {onMount} from "svelte";
 
     const HOST = "http://localhost:8080";
 
     /** @type {Promise<PluginProxy[]>} **/
     let data;
-    let serviceModalVisible = false;
     let pluginSelected;
-    let file;
+    let files;
+
+    let dropElem;
+
+    let serviceModalVisible = false;
+    let uploadModalVisible = false;
 
     function reloadData() {
         data = Axios.get(`${HOST}/state`)
@@ -61,58 +66,83 @@
         Axios.get(`${HOST}/config/service/${pluginId}/${serviceId}/${action}`).then(() => reloadData())
     }
 
-    function targetFile(event) {
-        file = event.target.files[0];
+    function sendModule() {
+
+        let promises = files.map(x => {
+            let formData = new FormData();
+            formData.append("file", x);
+            return Axios.post(`${HOST}/upload`, formData, {headers: {'Content-Type': 'multipart/form-data'}});
+        });
+
+        Promise
+                .all(promises)
+                .then(() => {
+                    files = [];
+                    uploadModalVisible = false;
+                    setTimeout(() => reloadData(), 1500)
+                })
+                .catch(e => console.log(e))
     }
 
-    function sendModule() {
-        let formData = new FormData();
-        formData.append("file", file);
-
-        Axios
-                .post(`${HOST}/upload`, formData, {
-                    headers: {
-                        'Content-Type': 'multipart/form-data'
-                    }
-                })
-                .then(() => {
-
-                    file = undefined;
-                    setTimeout(() => reloadData(), 1000)
-                });
+    function onDrop(event) {
+        event.preventDefault();
+        files = Array.from(event.dataTransfer.files);
     }
 
     reloadData()
 </script>
-<nav class="navbar is-black">
-    <div class="navbar-brand">
-        <div class="navbar-item">
-            <b class="has-text-white-bis">Pluggable Server</b>
-        </div>
-    </div>
-    <div class="navbar-menu">
-        <div class="navbar-end">
-            <div class="navbar-item">
-                <div class="field has-addons">
-                    <div class="control">
-                        <input class="input is-small" type="file" name="resume" on:change={(e)=> targetFile(e)}>
-                    </div>
-                    {#if file}
-                        <div class="control">
-                            <div class="button is-small is-primary" on:click={()=>sendModule()}>Send</div>
-                        </div>
-                    {/if}
-                </div>
+<div class="section">
+    <nav class="level">
+        <div class="level-left">
+            <div class="level-item has-text-centered">
+                <p class="title is-5">Pluggable Server</p>
             </div>
-            <div class="navbar-item">
-                <button class="button is-small" title="Refresh">
+        </div>
+        <div class="level-right">
+            <div class="level-item">
+                <button class="button is-small" title="Update modules" on:click={()=>uploadModalVisible=true}>
+                    <span class="icon"><i class="fas fa-upload"></i></span>
+                    <span>Upload</span>
+                </button>
+            </div>
+            <div class="level-item">
+                <button class="button is-small" title="Reload modules" on:click={()=>reloadData()}>
                     <span class="icon"><i class="fas fa-sync-alt"></i></span>
                     <span>Reload</span>
                 </button>
             </div>
         </div>
+    </nav>
+</div>
+<Modal bind:visible={uploadModalVisible}>
+    <span slot="title">Upload modules</span>
+    <div slot="body">
+        <div class="tags">
+            {#each (files||[]) as item}
+                <div class="tag is-link">{item.name}</div>
+            {/each}
+        </div>
+        <div
+                bind:this={dropElem}
+                on:drop|preventDefault|stopPropagation="{e=>onDrop(e)}"
+                on:dragover|preventDefault|stopPropagation="{()=>{}}"
+                on:dragenter|preventDefault|stopPropagation="{()=>{}}"
+                class="level drop-zone"
+        >
+            <span class="level-item subtitle">Drop zipped files...</span>
+        </div>
+        <div class="level">
+            <div class="level-left">
+                <div class="level-item">
+                    {#if files && files.length > 0}
+                        <button class="button is-link" on:click={()=>sendModule()}>Send</button>
+                    {/if}
+                </div>
+            </div>
+        </div>
     </div>
-</nav>
+</Modal>
+
 {#if pluginSelected}
     <Modal bind:visible={serviceModalVisible}>
         <span slot="title">{pluginSelected.id}</span>
@@ -120,7 +150,7 @@
             <table class="table is-hoverable is-fullwidth is-striped">
                 <thead>
                 <tr>
-                    <th style="width: 1%;">Nr</th>
+                    <th style="width: 1%;"></th>
                     <th>Services</th>
                     <th>State</th>
                     <th style="width: 1%;"></th>
@@ -166,7 +196,7 @@
                     <table class="table is-hoverable is-fullwidth is-striped">
                         <thead>
                         <tr>
-                            <th style="width: 5px;">Nr</th>
+                            <th style="width: 5px;"></th>
                             <th>Module</th>
                             <th>State</th>
                             <th></th>
@@ -178,14 +208,12 @@
                                 <td class="has-text-right has-pointer">
                                     <b>{index+1}</b>
                                 </td>
-                                <td class="has-pointer">
-                                    <b>{item.id}</b>
-                                </td>
+                                <td class="has-pointer">{item.id}</td>
                                 <td class="has-pointer">
                                     {#if item.installed}
                                         <p>{(item.active && "Enable") || "Disable" }</p>
                                     {:else}
-                                        <p>Uninstalled</p>
+                                        <p>Unplugged</p>
                                     {/if}
                                 </td>
                                 <td style="width: 1%; white-space: nowrap;">
@@ -226,6 +254,11 @@
                                                     <span class="icon"><i class="fas fa-upload"></i></span>
                                                 </button>
                                             </div>
+                                            <div class="control">
+                                                <button class="button is-small is-danger" title="Delete from file system" on:click={() => updatePlugin(item, "destroy")}>
+                                                    <span class="icon"><i class="fas fa-fire-alt"></i></span>
+                                                </button>
+                                            </div>
                                         {/if}
                                     </div>
                                 </td>
@@ -240,4 +273,9 @@
     {/if}
 </section>
 <style type="text/scss">
+    .drop-zone {
+        background: rgba(0, 0, 0, 0.1);
+        min-height: 20rem;
+        border: 2px dashed rgba(0, 0, 0, 0.5);
+    }
 </style>

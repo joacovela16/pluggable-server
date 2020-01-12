@@ -10,7 +10,7 @@ dependencies {
     compile "org.scala-lang:scala-compiler:2.12.10"
     compile group: 'org.apache.xbean', name: 'xbean-classloader', version: '4.15'
     compile group: 'net.lingala.zip4j', name: 'zip4j', version: '2.3.0'
-
+    compile group: 'commons-io', name: 'commons-io', version: '2.6'
 }
 
 
@@ -59,7 +59,7 @@ task buildClientAndPrepareJar(type: Jar, dependsOn: buildClient) {
     with jar
 }
 
-jar{
+jar {
     into("/app") {
         from fileTree("$rootDir.parent/client/dist")
     }
