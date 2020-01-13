@@ -3,7 +3,6 @@ package jsoft.plugserver.engine.util
 import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.{Directives, Route}
 import com.typesafe.scalalogging.LazyLogging
-import jsoft.plugserver.engine.model.PluginInstalled
 
 import scala.concurrent.Future
 import scala.language.implicitConversions
@@ -22,11 +21,4 @@ trait PluginImplicitsSupport extends Directives with LazyLogging {
   }
 
   implicit def optionResponse[T](x: Option[Route]): Route = x.getOrElse(complete(StatusCodes.NotFound))
-
-  implicit class PluginInstalledExt(x: PluginInstalled) {
-    def asEnable: PluginInstalled = PluginInstalled(x.id, x.installedDate, x.urls, active = true)
-
-    def asDisable: PluginInstalled = PluginInstalled(x.id, x.installedDate, x.urls, active = false)
-  }
-
 }

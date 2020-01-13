@@ -152,27 +152,29 @@
                 <tr>
                     <th style="width: 1%;"></th>
                     <th>Services</th>
+                    <th>Category</th>
                     <th>State</th>
                     <th style="width: 1%;"></th>
                 </tr>
                 </thead>
                 <tbody>
                 {#each pluginSelected.services as item, index (item)}
-                    <tr>
+                    <tr title={item.description}>
                         <td><b>{index+1}</b></td>
                         <td>{item.id}</td>
+                        <td>{item.category}</td>
                         <td>State</td>
                         <td style="width: 1%; white-space: nowrap;">
                             <div class="field has-addons">
                                 {#if item.active === true}
                                     <div class="control">
-                                        <button class="button is-small" title="Suspend service" on:click={()=>changeServiceState(pluginSelected.id, item.id, 'disable')}>
+                                        <button class="button is-small" title="Unplug" on:click={()=>changeServiceState(pluginSelected.id, item.id, 'disable')}>
                                             <span class="icon is-large"><i class="fa fa-power-off"></i></span>
                                         </button>
                                     </div>
                                 {:else}
                                     <div class="control">
-                                        <button class="button is-small" title="Active service" on:click={()=>changeServiceState(pluginSelected.id, item.id, 'enable')}>
+                                        <button class="button is-small is-primary" title="Plug" on:click={()=>changeServiceState(pluginSelected.id, item.id, 'enable')}>
                                             <span class="icon is-large"><i class="fa fa-plug"></i></span>
                                         </button>
                                     </div>
@@ -211,7 +213,7 @@
                                 <td class="has-pointer">{item.id}</td>
                                 <td class="has-pointer">
                                     {#if item.installed}
-                                        <p>{(item.active && "Active") || "Disable" }</p>
+                                        <p>{(item.active && "Active") || "Disabled" }</p>
                                     {:else}
                                         <p>Unplugged</p>
                                     {/if}
@@ -237,7 +239,7 @@
                                                 </div>
                                             {:else}
                                                 <div class="control">
-                                                    <button class="button is-small" title="Plug" on:click={()=>updatePlugin(item,  "enable")}>
+                                                    <button class="button is-small is-primary" title="Plug" on:click={()=>updatePlugin(item,  "enable")}>
                                                         <span class="icon"><i class="fas fa-plug"></i></span>
                                                     </button>
                                                 </div>

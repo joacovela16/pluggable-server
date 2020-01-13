@@ -1,4 +1,10 @@
 //noinspection CssUnknownTarget
+@font-face {
+  font-family: Roboto;
+  src: url("./static/Roboto-Regular.ttf");
+}
+$family-primary: "Roboto";
+
 @import "~@fortawesome/fontawesome-free/css/all.min.css";
 @import "~bulma/bulma";
 

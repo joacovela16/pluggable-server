@@ -7,11 +7,10 @@ import java.util.{Timer, TimerTask}
 import akka.http.scaladsl.model.{DateTime, StatusCodes}
 import akka.http.scaladsl.server.Route
 import com.typesafe.scalalogging.LazyLogging
-import jsoft.plugserver.engine.model
 import jsoft.plugserver.engine.model.Types.{PluginID, ServiceID}
 import jsoft.plugserver.engine.model._
 import jsoft.plugserver.engine.util.PluginImplicitsSupport
-import jsoft.plugserver.sdk.{RestService, Service}
+import jsoft.plugserver.sdk.api.{RestService, Service}
 import org.apache.commons.io.FileUtils
 
 import scala.collection.parallel.mutable.ParMap
@@ -31,7 +30,7 @@ trait PluginCore extends LazyLogging with PluginImplicitsSupport {
   logger.info(s"Config: Polling timeout: $POLLING_TIMEOUT")
 
   def getActiveService(pluginID: PluginID, serviceID: ServiceID): Option[Service] = {
-    PLUGIN_STORE.get(pluginID).collect { case x: PluginInstalled => x }.filter(_.active).flatMap(_.registry.get(serviceID)).filter(_.active).map(_.registry)
+    PLUGIN_STORE.get(pluginID).collect { case x: PluginInstalled => x }.filter(_.isActive).flatMap(_.registry.get(serviceID)).filter(_.active).map(_.registry)
   }
 
   def getActiveRestService(pluginID: PluginID, serviceID: ServiceID): Option[RestService] = getActiveService(pluginID, serviceID).collect { case x: RestService => x }
@@ -63,7 +62,7 @@ trait PluginCore extends LazyLogging with PluginImplicitsSupport {
         }
       }
       .foreach { urls =>
-        val installed: PluginInstalled = PluginInstalled(pluginID, DateTime.now, urls, installing)
+        val installed: PluginInstalled = PluginInstalled(pluginID, DateTime.now, urls).setActive(installing)
         PLUGIN_STORE.put(pluginID, installed)
         if (installing) {
           installed.registry.map { case (_, v) => v.registry.onStart() }
@@ -81,7 +80,7 @@ trait PluginCore extends LazyLogging with PluginImplicitsSupport {
       if (delete) {
         PLUGIN_STORE -= pluginId
       } else {
-        PLUGIN_STORE.put(pluginId, model.PluginUninstalled(pluginId))
+        PLUGIN_STORE.put(pluginId, PluginUninstalled(pluginId))
       }
 
       x match {
@@ -145,14 +144,14 @@ trait PluginCore extends LazyLogging with PluginImplicitsSupport {
 
   def pluginAsEnable(pluginID: PluginID): Future[Unit] = Future {
     getPlugin(pluginID).foreach { x =>
-      PLUGIN_STORE.put(pluginID, x.asEnable)
+      PLUGIN_STORE.put(pluginID, x.asActive())
       x.registry.foreach { case (_, v) => v.registry.onActive() }
     }
   }
 
   def pluginAsDisable(pluginID: PluginID): Future[Unit] = Future {
     getPlugin(pluginID).foreach { x =>
-      PLUGIN_STORE.put(pluginID, x.asDisable)
+      PLUGIN_STORE.put(pluginID, x.asInactive())
       x.registry.foreach { case (_, v) => v.registry.onSuspend() }
     }
   }
@@ -171,8 +170,8 @@ trait PluginCore extends LazyLogging with PluginImplicitsSupport {
           case Some(srv) =>
 
             action match {
-              case "enable" => plugin.registry.put(serviceID, ServiceProxy(srv.registry))
-              case "disable" => plugin.registry.put(serviceID, ServiceProxy(srv.registry, active = false))
+              case "enable" => plugin.registry.put(serviceID, ServiceProxy(srv.registry, active = true, srv.category, srv.description))
+              case "disable" => plugin.registry.put(serviceID, ServiceProxy(srv.registry, active = false, srv.category, srv.description))
               case _ => complete(StatusCodes.BadRequest, s"Action '$action' no suported.")
             }
 
@@ -193,8 +192,8 @@ trait PluginCore extends LazyLogging with PluginImplicitsSupport {
           x.id,
           Option(x.installedDate),
           installed = true,
-          active = x.active,
-          x.registry.map { case (k, v) => ServiceInfo(k, v.active) }.toList
+          active = x.isActive,
+          x.registry.map { case (k, v) => ServiceInfo(k, v.active, v.category.toString, v.description) }.toList
         )
       case x: PluginUninstalled => PluginInfo(x.id, None, installed = false, active = false, Nil)
     }.toList

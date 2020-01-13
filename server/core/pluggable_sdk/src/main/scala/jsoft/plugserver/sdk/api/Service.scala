@@ -1,10 +1,14 @@
-package jsoft.plugserver.sdk
+package jsoft.plugserver.sdk.api
 
 import com.typesafe.scalalogging.LazyLogging
 
 trait Service extends LazyLogging {
 
   def identifier: String
+
+  def category: Category = ServiceCategory
+
+  def description: String = "A service provider"
 
   def onStart(): Unit = {
     logger.info("onStart")
