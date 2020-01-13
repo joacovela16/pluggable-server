@@ -1,2 +1,2 @@
 # pluggable-server
-Scala Akka pluggable server
+An Akka pluggable server
