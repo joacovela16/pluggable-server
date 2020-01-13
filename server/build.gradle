@@ -1,0 +1,71 @@
+repositories {
+    mavenCentral()
+    maven {
+        url "https://plugins.gradle.org/m2/"
+    }
+}
+
+subprojects {
+    version = "1.0"
+    group = "jsoft.plugserver"
+
+    apply plugin: 'scala'
+    apply plugin: "maven"
+
+    repositories {
+        mavenLocal()
+        mavenCentral()
+        maven {
+            url "https://mvnrepository.com/artifact"
+        }
+    }
+
+    dependencies {
+        implementation "org.scala-lang:scala-compiler:2.12.10"
+    }
+
+    def displayName = project.displayName
+
+    if (displayName.contains(":module:")) {
+
+        task copyJar(type: Copy, dependsOn: build) {
+            into "$rootProject.buildDir/plugins/$project.name"
+            from project.jar
+        }
+
+        task prepare(type: Copy, dependsOn: copyJar) {
+            into "$rootProject.buildDir/plugins/$project.name/libs"
+            from configurations.runtime {
+                transitive false
+                include "*.jar"
+            }
+        }
+    }
+}
+
+project(":core:pluggable_server") {
+
+    task copyJar(type: Copy, dependsOn: [build, jar]) {
+        into "$rootProject.buildDir"
+        from project.jar
+    }
+
+    task prepare(type: Copy, dependsOn: copyJar) {
+        into "$rootProject.buildDir/libs"
+        from configurations.runtime
+    }
+}
+
+task prepare(dependsOn: subprojects.findAll { it.tasks.hasProperty("prepare") }.collect { it.tasks.prepare }) {
+}
+
+task fastCompile() {
+
+    dependsOn subprojects
+            .findAll { it.tasks.hasProperty("prepare") }
+            .collect { it.tasks.prepare }
+
+}
+
+
+defaultTasks("build", "prepare")

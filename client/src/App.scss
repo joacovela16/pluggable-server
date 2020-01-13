@@ -1,0 +1,35 @@
+//noinspection CssUnknownTarget
+@font-face {
+  font-family: Roboto;
+  src: url("./static/Roboto-Regular.ttf");
+}
+$family-primary: "Roboto";
+
+
+// @import "~@fortawesome/fontawesome-free/css/all.min.css";
+@import "~bulma/bulma";
+
+html, body {
+  padding: 0;
+  margin: 0;
+  overflow: auto;
+  height: 100%;
+  width: 100%;
+}
+
+body{
+  box-shadow: 0 0 30px rgba(0,0,0,0.25) inset;
+  background:url(
+  data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAEElEQVQImWNgwAGkcEmQCQAIiQAbZeDsigAAAABJRU5ErkJggg==
+  ) repeat;
+}
+
+.has-pointer {
+  cursor: pointer;
+}
+
+.is-vertical-align {
+  > td {
+    vertical-align: middle;
+  }
+}

@@ -1,0 +1,74 @@
+import org.apache.tools.ant.taskdefs.condition.Os
+
+dependencies {
+    compile project(":core:pluggable_sdk")
+    compile "de.heikoseeberger:akka-http-circe_2.12:1.30.0"
+    compile "io.circe:circe-core_2.12:0.12.3"
+    compile "io.circe:circe-generic_2.12:0.12.3"
+    compile "io.circe:circe-parser_2.12:0.12.3"
+//    compile "ch.megard:akka-http-cors_2.12:0.4.2"
+    compile "org.scala-lang:scala-compiler:2.12.10"
+    compile group: 'org.apache.xbean', name: 'xbean-classloader', version: '4.15'
+    compile group: 'net.lingala.zip4j', name: 'zip4j', version: '2.3.0'
+    compile group: 'commons-io', name: 'commons-io', version: '2.6'
+}
+
+
+task buildClient(type: Exec) {
+    workingDir "$rootDir.parent/client"
+
+    if (Os.isFamily(Os.FAMILY_WINDOWS)) {
+        commandLine "cmd.exe"
+        args "/c", "npm install && npm run prod-build"
+    } else {
+        commandLine "bash"
+        args "-c", "npm install && npm run prod-build"
+    }
+
+    standardOutput = new ByteArrayOutputStream()
+    ext.output = {
+        return standardOutput.toString()
+    }
+}
+
+task fastCompile(type: Jar) {
+    into("/app") {
+        from fileTree("$rootDir.parent/client/dist")
+    }
+
+    manifest {
+        attributes(
+                'Class-Path': configurations.runtime.collect { x -> "libs/$x.name" }.join(' '),
+                'Main-Class': 'jsoft.plugserver.engine.Main'
+        )
+    }
+    with jar
+}
+
+task buildClientAndPrepareJar(type: Jar, dependsOn: buildClient) {
+    into("/app") {
+        from fileTree("$rootDir.parent/client/dist")
+    }
+
+    manifest {
+        attributes(
+                'Class-Path': configurations.runtime.collect { x -> "libs/$x.name" }.join(' '),
+                'Main-Class': 'jsoft.plugserver.engine.Main'
+        )
+    }
+    with jar
+}
+
+jar {
+    dependsOn(buildClient)
+    into("/app") {
+        from fileTree("$rootDir.parent/client/dist")
+    }
+
+    manifest {
+        attributes(
+                'Class-Path': configurations.runtime.collect { x -> "libs/$x.name" }.join(' '),
+                'Main-Class': 'jsoft.plugserver.engine.Main'
+        )
+    }
+}
