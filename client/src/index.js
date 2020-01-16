@@ -1,3 +1,4 @@
+import "@fortawesome/fontawesome-free/css/all.min.css";
 import "./App.scss";
 
 import App from "./App.svelte";
